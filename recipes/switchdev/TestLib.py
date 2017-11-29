@@ -496,6 +496,20 @@ class TestLib:
 
         return self.custom(iface.get_host(), desc, err_msg)
 
+    def devlink_reload(self, iface):
+        devlink_dev = iface.get_devlink_name()
+        m = iface.get_host()
+
+        cmd = "devlink reload {}"
+        m.run(cmd.format(devlink_dev))
+
+    def devlink_resource_set(self, iface, path, size):
+        devlink_dev = iface.get_devlink_name()
+        m = iface.get_host()
+
+        cmd = "devlink resource set {} path {} size {}"
+        m.run(cmd.format(devlink_dev, path, size))
+
     def expect_mr_notif(self, sw, notif_type, source_ip = None,
                         source_vif = None, group_ip = None, none_ok = False):
         notif = sw.mroute_get_notif()
