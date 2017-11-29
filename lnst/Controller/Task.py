@@ -656,6 +656,9 @@ class InterfaceAPI(object):
         self._if = interface
         self._host = host
 
+    def get_machine(self):
+        return self._if.get_machine()
+
     def get_id(self):
         return self._if.get_id()
 

@@ -678,6 +678,9 @@ class Interface(object):
         self._devlink = None
         self._routes = []
 
+    def get_machine(self):
+        return self._machine
+
     def get_id(self):
         return self._id
 
