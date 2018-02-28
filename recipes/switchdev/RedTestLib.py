@@ -59,10 +59,20 @@ class RedTestLib:
         self.max = 0
         self.rate = self.speed_base
         self.set_traffic_ecn_enable()
+        self.parent = None
 
     # To be used to report about problem that shouldn't occur.
     def generic_error_function(self, msg):
         self.tl.custom(self.switch, "TC qdisc RED", msg)
+
+    def set_prio(self, bands = None, priomap = None, change = False):
+        self.egress_port.set_qdisc_prio(bands, priomap, change)
+        if not self.parent:
+            if priomap:
+                self.parent = int(priomap.split()[0])
+            else:
+                self.parent = 2 # the default child number for the default
+                                # traffic priority (0).
 
     # To be used for checks that always needs to report passing or failing
     def test_result(self, desc, msg):
@@ -77,6 +87,9 @@ class RedTestLib:
         logging.info("create bottleneck of %s to %d" % (aliases["speed_hi"],
                                                         self.speed_base))
 
+    def choose_parent(self, parent):
+        self.parent = parent
+
     def set_traffic_ecn_enable(self):
         self.tos = '01'
         logging.info("traffic will be ecn enabled")
@@ -85,11 +98,15 @@ class RedTestLib:
         self.tos = '00'
         logging.info("traffic will be ecn disabled")
 
-    def set_red(self, min, max, prob=None, ecn=False):
+    def set_red(self, min, max, prob=None, ecn=False, parent=None):
         limit = max * 4
         avpkt = 1000
-        self.egress_port.set_qdisc_red(limit, avpkt, min, max, ecn=ecn)
-        stats = self.egress_port.qdisc_red_stats()
+        if parent and parent != self.parent:
+            self.parent = parent
+
+        self.egress_port.set_qdisc_red(limit, avpkt, min, max, ecn=ecn,
+                                       parent=self.parent)
+        stats = self.egress_port.qdisc_red_stats(parent=self.parent)
         self.check_stats_were_offloaded(stats)
         self.min = min
         self.max = max
@@ -97,7 +114,7 @@ class RedTestLib:
     def set_no_red(self):
         self.min = 0
         self.max = 0
-        self.egress_port.unset_qdisc()
+        self.egress_port.unset_qdisc(parent=self.parent)
 
     def set_low_rate(self):
         self.rate = self.speed_base * 0.99
@@ -139,7 +156,7 @@ class RedTestLib:
         pkt_size = self.links[self.ingress_port].get_mtu()
 
         if is_red: # if RED is enabled
-            self.egress_port.collect_qdisc_red_stats()
+            self.egress_port.collect_qdisc_red_stats(parent=self.parent)
 
         start_time = datetime.datetime.now()
         self.tl.pktgen(self.links[self.ingress_port],
