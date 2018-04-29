@@ -9,6 +9,7 @@ nogahf@mellanox.com (Nogah Frankel)
 """
 
 from time import sleep
+import datetime
 import logging
 from lnst.Controller.Task import ctl
 
@@ -140,9 +141,17 @@ class RedTestLib:
         if is_red: # if RED is enabled
             self.egress_port.collect_qdisc_red_stats()
 
+        start_time = datetime.datetime.now()
         self.tl.pktgen(self.links[self.ingress_port],
                        self.links[self.egress_port], pkt_size, count=10**6,
                        rate=str(self.rate)+"M", tos=self.tos)
+        end_time = datetime.datetime.now()
+        # Approximate rate in mega bits per second
+        actual_rate = int(pkt_size) * 8./(end_time - start_time).total_seconds()
+        if actual_rate < self.rate * 0.8:
+            raise Exception("Actual send rate %d is much lower then asked for %d\n"
+                            "Please run on stronger machine" % (actual_rate,
+                            self.rate))
         sleep(3)
 
         rx_after = self.ingress_port.link_stats()["rx_packets"]
